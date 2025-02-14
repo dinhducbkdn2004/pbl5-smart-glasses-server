@@ -1,22 +1,24 @@
 # Smart Glasses Navigation Server
 
+A real-time navigation server API for smart glasses system supporting visually impaired people.
+
 Server API cho hệ thống kính thông minh hỗ trợ người khiếm thị với tính năng chỉ đường thời gian thực.
 
-## Yêu cầu hệ thống
+## System Requirements | Yêu cầu hệ thống
 
--   Python 3.8 hoặc cao hơn
--   pip (Python package manager)
+- Python 3.8 or higher | Python 3.8 hoặc cao hơn
+- pip (Python package manager)
 
-## Cài đặt
+## Installation | Cài đặt
 
 1. Clone repository:
 
 ```bash
-git clone <https://github.com/dinhducbkdn2004/pbl5-smart-glasses-server.git>
+git clone https://github.com/dinhducbkdn2004/pbl5-smart-glasses-server.git
 cd pbl5-smart-glasses-server
 ```
 
-2. Tạo môi trường ảo Python:
+2. Create Python virtual environment | Tạo môi trường ảo Python:
 
 ```bash
 python -m venv venv
@@ -28,22 +30,25 @@ venv\Scripts\activate
 source venv/bin/activate
 ```
 
-3. Cài đặt các dependencies:
+3. Install dependencies | Cài đặt các dependencies:
 
 ```bash
 pip install -r requirements.txt
 ```
 
-4. Cấu hình môi trường:
+4. Configure environment | Cấu hình môi trường:
 
 ```bash
+# Edit .env file with your configuration
+# No API key required as we use OpenStreetMap
+
 # Chỉnh sửa file .env với thông tin cấu hình của bạn
-# - Thêm Mapbox Access Token của bạn
+# Không cần API key vì chúng ta sử dụng OpenStreetMap
 ```
 
-## Chạy server
+## Running the Server | Chạy server
 
-1. Kích hoạt môi trường ảo (nếu chưa kích hoạt):
+1. Activate virtual environment (if not already activated) | Kích hoạt môi trường ảo (nếu chưa kích hoạt):
 
 ```bash
 # Windows
@@ -53,19 +58,19 @@ venv\Scripts\activate
 source venv/bin/activate
 ```
 
-2. Khởi động server:
+2. Start the server | Khởi động server:
 
 ```bash
 uvicorn app.main:app --reload
 ```
 
-Server sẽ chạy tại `http://localhost:8000`
+Server will run at | Server sẽ chạy tại `http://localhost:8000`
 
 ## API Endpoints
 
 ### 1. REST API
 
-#### Lấy thông tin chỉ đường
+#### Get Route Information | Lấy thông tin chỉ đường
 
 ```http
 POST /get_route
@@ -73,69 +78,39 @@ Content-Type: application/json
 
 {
     "current_location": {
-        "latitude": 16.0544,
-        "longitude": 108.2022
+        "latitude": 16.061649799999998,
+        "longitude": 108.15911509708195
     },
-    "destination_name": "Đại học Bách Khoa Đà Nẵng"
+    "destination_text": "Đại học Bách Khoa Đà Nẵng"
 }
 ```
 
-### 2. WebSocket API
+## Features | Tính năng
 
-#### Kết nối WebSocket để nhận hướng dẫn thời gian thực
+1. **Detailed Vietnamese Voice Guidance | Hướng dẫn chi tiết bằng tiếng Việt**
+    - Step-by-step instructions | Chỉ dẫn theo số bước đi
+    - Distance in meters | Khoảng cách theo mét
+    - Detailed turn directions | Hướng rẽ chi tiết
 
-```javascript
-// Kết nối
-const ws = new WebSocket('ws://localhost:8000/ws/navigation/client-123');
+2. **Real-time Updates | Cập nhật thời gian thực**
+    - GPS location tracking | Theo dõi vị trí GPS
+    - Automatic guidance updates | Tự động cập nhật hướng dẫn
+    - Turn notifications | Thông báo trước khi đến điểm rẽ
 
-// Gửi vị trí và điểm đến
-ws.send(
-    JSON.stringify({
-        latitude: 16.0544,
-        longitude: 108.2022,
-        destination_name: 'Đại học Bách Khoa Đà Nẵng',
-    })
-);
+3. **Safety Features | Tính năng an toàn**
+    - Obstacle warnings | Cảnh báo chướng ngại vật
+    - Sudden direction change alerts | Thông báo thay đổi hướng đột ngột
+    - Continuous monitoring | Giám sát liên tục
 
-// Lắng nghe hướng dẫn
-ws.onmessage = (event) => {
-    const guidance = JSON.parse(event.data);
-    console.log(guidance);
-};
-```
+## Testing the API | Kiểm tra API
 
-## Tính năng
+After starting the server, you can access | Sau khi khởi động server, bạn có thể truy cập:
 
-1. **Hướng dẫn chi tiết bằng tiếng Việt**
+- Swagger UI: `http://localhost:8000/docs`
+- ReDoc: `http://localhost:8000/redoc`
 
-    - Chỉ dẫn theo số bước đi
-    - Khoảng cách theo mét
-    - Hướng rẽ chi tiết
+## Notes | Lưu ý
 
-2. **Cập nhật thời gian thực**
-
-    - Theo dõi vị trí GPS
-    - Tự động cập nhật hướng dẫn
-    - Thông báo trước khi đến điểm rẽ
-
-3. **Tính năng an toàn**
-    - Cảnh báo chướng ngại vật
-    - Thông báo thay đổi hướng đột ngột
-    - Giám sát liên tục
-
-## Kiểm tra API
-
-Sau khi khởi động server, bạn có thể:
-
-1. Truy cập documentation tại:
-
-    - Swagger UI: `http://localhost:8000/docs`
-    - ReDoc: `http://localhost:8000/redoc`
-
-2. Test WebSocket bằng công cụ như [WebSocket King](https://websocketking.com)
-
-## Lưu ý
-
--   Đảm bảo Mapbox Access Token hợp lệ trong file `.env`
--   Server cần duy trì kết nối ổn định để cập nhật theo thời gian thực
--   Khuyến nghị sử dụng SSL/TLS trong môi trường production
+- Using OpenStreetMap for navigation services | Sử dụng OpenStreetMap cho dịch vụ chỉ đường
+- Server requires stable connection for real-time updates | Server cần duy trì kết nối ổn định để cập nhật theo thời gian thực
+- SSL/TLS recommended for production environment | Khuyến nghị sử dụng SSL/TLS trong môi trường production

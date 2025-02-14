@@ -1,22 +1,25 @@
-from pydantic import BaseModel
-from typing import List, Optional
+from pydantic import BaseModel, Field
+from typing import List, Optional, Dict
 
-class Coordinates(BaseModel):
-    latitude: float
-    longitude: float
+class LocationPoint(BaseModel):
+    latitude: float = Field(..., description="Latitude of the point")
+    longitude: float = Field(..., description="Longitude of the point")
 
-class RouteRequest(BaseModel):
-    current_location: Coordinates
-    destination_name: str
+class NavigationRequest(BaseModel):
+    current_location: LocationPoint = Field(..., description="Current GPS location")
+    destination: LocationPoint = Field(..., description="Destination location")
+
+class TextDestinationRequest(BaseModel):
+    current_location: LocationPoint = Field(..., description="Current GPS location")
+    destination_text: str = Field(..., description="Text description of destination location")
 
 class NavigationStep(BaseModel):
-    instruction: str
-    distance: float  # in meters
-    duration: float  # in seconds
-    bearing: float   # direction in degrees
-    
-class RouteResponse(BaseModel):
-    total_distance: float    # in kilometers
-    total_duration: float    # in minutes
-    steps: List[NavigationStep]
-    current_step_index: Optional[int] = 0
+    instruction: str = Field(..., description="Detailed navigation instruction for visually impaired")
+    distance: float = Field(..., description="Distance for this step in meters")
+    direction: str = Field(..., description="Direction to turn (left/right/straight)")
+    landmarks: Optional[List[str]] = Field(default=None, description="Notable landmarks for this step")
+
+class NavigationResponse(BaseModel):
+    total_distance: float = Field(..., description="Total distance in meters")
+    estimated_time: int = Field(..., description="Estimated time in minutes")
+    steps: List[NavigationStep] = Field(..., description="List of navigation steps")
