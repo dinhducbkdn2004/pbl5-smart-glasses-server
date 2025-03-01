@@ -6,7 +6,7 @@ app = FastAPI()
 
 @app.get("/")
 async def index():
-    return {"message": "Hello world"}
+    return {"message": "Hello world from FastAPI"}
 
 
 # Bao gồm các route từ file route.py
