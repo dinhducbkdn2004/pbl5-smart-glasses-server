@@ -6,7 +6,7 @@ app = FastAPI()
 
 @app.get("/")
 async def index():
-    return {"message": "Server listening on port 8000"}
+    return {"message": "Hello world"}
 
 
 # Bao gồm các route từ file route.py
