@@ -4,3 +4,5 @@ requests
 pydantic
 python-dotenv
 pytest
+flake8
+docker
