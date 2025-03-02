@@ -1,8 +1,15 @@
-# Smart Glasses Server
+# Smart Glasses Navigation Server
 
-FastAPI backend server for the Smart Glasses project.
+FastAPI backend server for the Smart Glasses project, providing navigation assistance for visually impaired users.
 
-Backend server FastAPI cho dự án Smart Glasses.
+Backend server FastAPI cho dự án Smart Glasses, hỗ trợ điều hướng cho người khiếm thị.
+
+## Features | Tính năng
+
+-   Voice-guided navigation using GPS coordinates | Điều hướng bằng giọng nói sử dụng tọa độ GPS
+-   Text-to-coordinates address lookup | Tìm kiếm địa chỉ từ văn bản sang tọa độ
+-   Step-by-step walking directions | Chỉ đẫn đi bộ từng bước
+-   Distance and time estimates | Ước tính khoảng cách và thời gian
 
 ## Project Structure | Cấu trúc dự án
 
@@ -17,6 +24,43 @@ app/
 └── __init__.py # Package initialization | Khởi tạo package
 ```
 
+## API Endpoints | Các Endpoints API
+
+### Navigation Routes | Routes Điều hướng
+
+#### POST `/api/v1/navigation`
+
+-   Get navigation instructions using GPS coordinates | Lấy hướng dẫn điều hướng bằng tọa độ GPS
+-   Request body | Body yêu cầu:
+
+```json
+{
+    "current_location": {
+        "latitude": float,
+        "longitude": float
+    },
+    "destination": {
+        "latitude": float,
+        "longitude": float
+    }
+}
+```
+
+#### POST `/api/v1/navigation/by-text`
+
+-   Get navigation instructions using text address | Lấy hướng dẫn điều hướng bằng địa chỉ văn bản
+-   Request body | Body yêu cầu:
+
+```json
+{
+    "current_location": {
+        "latitude": float,
+        "longitude": float
+    },
+    "destination_text": "string"
+}
+```
+
 ## Prerequisites | Yêu cầu
 
 -   Python 3.10+
@@ -28,7 +72,7 @@ app/
 1. Clone the repository | Clone repository
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/dinhducbkdn2004/pbl5-smart-glasses-server.git
 cd pbl5-smart-glasses-server
 ```
 
@@ -68,39 +112,11 @@ Run tests using pytest | Chạy test bằng pytest:
 pytest app/tests/
 ```
 
-## CI/CD Pipeline | Pipeline CI/CD
+The test suite includes | Bộ test bao gồm:
 
-The project uses GitHub Actions for continuous integration and deployment.
-Dự án sử dụng GitHub Actions cho tích hợp và triển khai liên tục.
-
-### Pipeline Stages | Các giai đoạn Pipeline
-
-1. **Test Stage | Giai đoạn Test**
-
-    - Runs pytest test suite | Chạy bộ test pytest
-    - Performs code quality checks with flake8 | Kiểm tra chất lượng code với flake8
-    - Uses caching to speed up builds | Sử dụng cache để tăng tốc build
-
-2. **Build & Deploy Stage | Giai đoạn Build & Deploy**
-    - Builds Docker image | Build Docker image
-    - Pushes to Docker Hub (on main branch) | Đẩy lên Docker Hub (trên nhánh main)
-    - Uses layer caching for faster builds | Sử dụng layer caching để build nhanh hơn
-
-### Setting up CI/CD | Cài đặt CI/CD
-
-1. Add required GitHub secrets | Thêm GitHub secrets cần thiết:
-
-    - `DOCKER_USERNAME`: Your Docker Hub username | Tên người dùng Docker Hub của bạn
-    - `DOCKER_PASSWORD`: Your Docker Hub access token | Token truy cập Docker Hub của bạn
-
-2. The pipeline automatically runs on | Pipeline tự động chạy khi:
-
-    - Push to main branch | Push lên nhánh main
-    - Pull requests to main branch | Tạo pull request vào nhánh main
-
-3. Monitor deployments in | Theo dõi triển khai tại:
-    - GitHub Actions tab | Tab GitHub Actions
-    - Docker Hub repository | Repository Docker Hub
+-   Unit tests for navigation services | Unit test cho services điều hướng
+-   API endpoint integration tests | Test tích hợp cho endpoints API
+-   Mock tests for external services | Test mock cho services bên ngoài
 
 ## API Documentation | Tài liệu API
 
@@ -129,7 +145,3 @@ git commit -m "feat: your feature description"
 ```bash
 git push origin feature/your-feature-name
 ```
-
-## License | Giấy phép
-
-[Add your license information here | Thêm thông tin giấy phép của bạn vào đây]

@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   api:
     image: dinhduc2004/pbl5-smart-glasses-server-api:latest
