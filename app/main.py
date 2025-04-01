@@ -2,22 +2,12 @@ from fastapi import FastAPI
 from app.api.route import router
 from app.core.config import settings
 from app.core.logging import logger
-from fastapi.middleware.cors import CORSMiddleware
 
 # Khởi tạo FastAPI app
 app = FastAPI(
     title=settings.PROJECT_NAME,
     version=settings.VERSION,
     openapi_url=f"{settings.API_V1_STR}/openapi.json"
-)
-
-# Cấu hình CORS
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # Cho phép tất cả origins trong development
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
 )
 
 @app.on_event("startup")
