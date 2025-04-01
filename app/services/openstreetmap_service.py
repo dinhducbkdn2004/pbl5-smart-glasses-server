@@ -3,15 +3,35 @@ from typing import List, Tuple, Dict
 from app.models.route_model import LocationPoint, NavigationStep, NavigationResponse
 import math
 import urllib.parse
+from functools import lru_cache
+from app.core.logging import logger
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
+import time
 
 class OpenStreetMapService:
     def __init__(self):
         self.osrm_url = "http://router.project-osrm.org/route/v1/foot"
         self.nominatim_url = "https://nominatim.openstreetmap.org/search"
         self.user_agent = "SmartGlassesNavigationApp/1.0"
+        self._cache = {}
+        
+        # Cấu hình retry strategy
+        retry_strategy = Retry(
+            total=3,  # Số lần retry tối đa
+            backoff_factor=1,  # Thời gian chờ giữa các lần retry
+            status_forcelist=[500, 502, 503, 504],  # Các status code cần retry
+        )
+        
+        # Tạo session với retry strategy
+        self.session = requests.Session()
+        adapter = HTTPAdapter(max_retries=retry_strategy)
+        self.session.mount("http://", adapter)
+        self.session.mount("https://", adapter)
 
+    @lru_cache(maxsize=1000)
     def _calculate_bearing(self, point1: Tuple[float, float], point2: Tuple[float, float]) -> float:
-        """Calculate the bearing between two points."""
+        """Calculate the bearing between two points with caching."""
         lat1, lon1 = math.radians(point1[0]), math.radians(point1[1])
         lat2, lon2 = math.radians(point2[0]), math.radians(point2[1])
         
@@ -21,8 +41,9 @@ class OpenStreetMapService:
         bearing = math.degrees(math.atan2(y, x))
         return (bearing + 360) % 360
 
+    @lru_cache(maxsize=1000)
     def _get_direction(self, prev_bearing: float, next_bearing: float) -> str:
-        """Get human-readable direction based on bearing change."""
+        """Get human-readable direction based on bearing change with caching."""
         angle_diff = ((next_bearing - prev_bearing + 180) % 360) - 180
         
         if abs(angle_diff) < 20:
@@ -32,48 +53,76 @@ class OpenStreetMapService:
         else:
             return "Turn left"
 
+    def _make_request(self, url: str, params: Dict = None, headers: Dict = None, timeout: int = 30) -> Dict:
+        """Make HTTP request with retry mechanism."""
+        try:
+            response = self.session.get(
+                url,
+                params=params,
+                headers=headers,
+                timeout=timeout
+            )
+            response.raise_for_status()
+            return response.json()
+        except requests.Timeout:
+            logger.error(f"Request timeout for URL: {url}")
+            raise Exception("Request timeout. Please try again.")
+        except requests.RequestException as e:
+            logger.error(f"Request error for URL {url}: {str(e)}")
+            raise Exception(f"Request failed: {str(e)}")
+
+    @lru_cache(maxsize=1000)
     def geocode_address(self, address: str) -> LocationPoint:
-        """Convert text address to coordinates using Nominatim."""
+        """Convert text address to coordinates using Nominatim with caching."""
+        cache_key = f"geocode_{address}"
+        if cache_key in self._cache:
+            logger.debug(f"Cache hit for address: {address}")
+            return self._cache[cache_key]
+
         params = {
             'q': address,
             'format': 'json',
-            'countrycodes': 'vn',  # Bias results to Vietnam
+            'countrycodes': 'vn',
             'limit': 1
         }
         
         headers = {
-            'User-Agent': self.user_agent  # Required by Nominatim's terms of use
+            'User-Agent': self.user_agent
         }
         
         try:
-            response = requests.get(
-                self.nominatim_url,
-                params=params,
-                headers=headers
-            )
-            response.raise_for_status()
-            results = response.json()
+            results = self._make_request(self.nominatim_url, params=params, headers=headers, timeout=10)
             
             if not results:
                 raise ValueError(f"No location found for address: {address}")
             
             location = results[0]
-            return LocationPoint(
+            result = LocationPoint(
                 latitude=float(location['lat']),
                 longitude=float(location['lon'])
             )
-        except requests.RequestException as e:
-            raise Exception(f"Error during geocoding: {str(e)}")
+            
+            # Cache kết quả
+            self._cache[cache_key] = result
+            logger.debug(f"Cached geocoding result for: {address}")
+            
+            return result
+        except Exception as e:
+            logger.error(f"Error during geocoding: {str(e)}")
+            raise
 
     def get_navigation(self, current: LocationPoint, destination: LocationPoint) -> NavigationResponse:
-        """Get navigation instructions from current location to destination."""
+        """Get navigation instructions from current location to destination with caching."""
+        cache_key = f"nav_{current.latitude}_{current.longitude}_{destination.latitude}_{destination.longitude}"
+        if cache_key in self._cache:
+            logger.debug(f"Cache hit for navigation")
+            return self._cache[cache_key]
+
         coords = f"{current.longitude},{current.latitude};{destination.longitude},{destination.latitude}"
         url = f"{self.osrm_url}/{coords}?steps=true&annotations=true&overview=full"
         
         try:
-            response = requests.get(url)
-            response.raise_for_status()
-            data = response.json()
+            data = self._make_request(url, timeout=30)
             
             if "routes" not in data or not data["routes"]:
                 raise ValueError("No route found")
@@ -123,12 +172,17 @@ class OpenStreetMapService:
             
             estimated_time = int(total_distance / (1.4 * 60))  # Convert to minutes
             
-            return NavigationResponse(
+            result = NavigationResponse(
                 total_distance=total_distance,
                 estimated_time=estimated_time,
                 steps=steps
             )
-        except requests.RequestException as e:
-            raise Exception(f"Error fetching route: {str(e)}")
-        except (KeyError, ValueError) as e:
-            raise Exception(f"Error processing route data: {str(e)}")
+            
+            # Cache kết quả
+            self._cache[cache_key] = result
+            logger.debug(f"Cached navigation result")
+            
+            return result
+        except Exception as e:
+            logger.error(f"Error processing route data: {str(e)}")
+            raise

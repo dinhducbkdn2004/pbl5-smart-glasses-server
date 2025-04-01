@@ -59,6 +59,14 @@ app/
     },
     "destination_text": "string"
 }
+
+{
+     "current_location": {
+         "latitude": 16.061649799999998,
+         "longitude": 108.15911509708195
+     },
+     "destination_text": "Đại học Bách Khoa Đà Nẵng"
+ }
 ```
 
 ## Prerequisites | Yêu cầu
