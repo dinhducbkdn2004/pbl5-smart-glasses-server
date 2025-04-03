@@ -42,31 +42,12 @@ class OpenStreetMapService:
     def _get_direction(self, prev_bearing: float, next_bearing: float) -> str:
         angle_diff = ((next_bearing - prev_bearing + 180) % 360) - 180
         
-        if angle_diff > 45:
-            return "Rẽ phải vuông góc"
-        elif angle_diff > 20:
-            return "Rẽ phải nhẹ"
-        elif angle_diff < -45:
-            return "Rẽ trái vuông góc"
+        if angle_diff > 20:
+            return "Rẽ Phải"
         elif angle_diff < -20:
-            return "Rẽ trái nhẹ"
+            return "Rẽ Trái"
         else:
-            return "Tiếp tục đi thẳng"
-
-    def _format_distance(self, distance: float) -> str:
-        if distance < 5:  # Giảm ngưỡng từ 10m xuống 5m
-            return "ngay phía trước"
-        elif distance < 20:  # Giảm ngưỡng từ 50m xuống 20m
-            return "khoảng 30 bước chân phía trước"
-        elif distance < 50:  # Giảm ngưỡng từ 100m xuống 50m
-            return "khoảng 80 bước chân phía trước"
-        else:
-            # Giả sử mỗi bước chân dài khoảng 0.6 mét (phù hợp với tốc độ đi chậm và thận trọng)
-            steps = int(distance / 0.6)
-            if steps > 200:  # Nếu số bước quá lớn, chuyển sang đơn vị phút
-                minutes = int(distance / (0.6 * 60))  # Giả sử tốc độ đi bộ 0.6m/bước, 60 bước/phút
-                return f"khoảng {minutes} phút đi bộ phía trước"
-            return f"khoảng {steps} bước chân phía trước"
+            return "Đi Thẳng"
 
     def _make_request(self, url: str, params: Dict = None, headers: Dict = None, timeout: int = 30) -> Dict:
         try:
@@ -166,33 +147,47 @@ class OpenStreetMapService:
                         direction = self._get_direction(prev_bearing, current_bearing)
                     prev_bearing = current_bearing
                     
-                    # Xây dựng hướng dẫn chi tiết
-                    instruction = ""
-                    
-                    # Thêm thông tin về vị trí hiện tại
-                    if "name" in step and step["name"]:
-                        instruction = f"Bạn đang đi trên {step.get('name')}. "
-                    
-                    # Thêm hướng dẫn về điểm mốc và rẽ
-                    if direction != "Tiếp tục đi thẳng":
-                        instruction += f"Tại điểm rẽ phía trước, {direction.lower()}. "
-                        if step.get('name'):
-                            instruction += f"Bạn sẽ rẽ vào {step.get('name')}. "
-                    else:
-                        instruction += f"{direction} trên {step.get('name', 'đường này')}. "
-                    
-                    # Thêm thông tin về khoảng cách
-                    if step["distance"] > 0:
-                        distance_text = self._format_distance(step["distance"])
-                        instruction += f"Đi tiếp {distance_text}"
+                    # Xử lý trường hợp đã đến đích
+                    if step["distance"] == 0 and step == leg["steps"][-1]:
+                        steps.append(NavigationStep(
+                            instruction="Đích đến đang ở vị trí hiện tại.",
+                            distance=0,
+                            direction=direction
+                        ))
+                        continue
                         
-                        # Thêm thông tin về điểm mốc tiếp theo nếu có
-                        if len(step["intersections"]) > 1:
-                            instruction += ", bạn sẽ gặp một ngã rẽ"
+                    # Bỏ qua các bước có distance = 0 trừ bước cuối cùng
+                    if step["distance"] == 0 and step != leg["steps"][-1]:
+                        continue
                     
-                    # Thêm cảnh báo về địa hình hoặc chướng ngại vật nếu có
-                    if "lanes" in step and step["lanes"] > 1:
-                        instruction += f". Chú ý đây là đường có {step['lanes']} làn xe"
+                    # Cải thiện cấu trúc instruction
+                    instruction = []
+                    
+                    # Thêm thông tin vị trí hiện tại
+                    if "name" in step and step["name"]:
+                        instruction.append(f"Bạn đang đi trên {step['name']}")
+                    
+                    # Thêm hướng dẫn rẽ
+                    if direction:
+                        if direction == "Đi Thẳng":
+                            instruction.append("Tiếp tục đi thẳng")
+                        else:
+                            instruction.append(f"Đi đến điểm rẽ: {direction}")
+                    elif not instruction:  # Nếu không có tên đường và không có hướng rẽ
+                        instruction.append("Đi thẳng trên đường này")
+                    
+                    # Thêm khoảng cách
+                    if step["distance"] > 0:
+                        distance = step["distance"]
+                        if distance > 1000:
+                            # Làm tròn đến 1 chữ số thập phân khi chuyển sang km
+                            distance_km = round(distance / 1000, 1)
+                            instruction.append(f"Đi tiếp {distance_km} ki lô mét")
+                        else:
+                            instruction.append(f"Đi tiếp {int(distance)} mét")
+                    
+                    # Kết hợp các phần instruction
+                    instruction = ". ".join(instruction) + "."
                     
                     steps.append(NavigationStep(
                         instruction=instruction,
@@ -201,7 +196,13 @@ class OpenStreetMapService:
                         direction=direction,
                     ))
             
-            estimated_time = int(total_distance / (1.4 * 60))
+            # Tính thời gian ước tính dựa trên:
+            # - WALKING_SPEED_MPS: Tốc độ đi bộ trung bình (mét/giây)
+            # - SECONDS_PER_MINUTE: Số giây trong 1 phút
+            WALKING_SPEED_MPS = 1  # 2 km/h = 0.6 m/s
+            SECONDS_PER_MINUTE = 60
+            
+            estimated_time = int(total_distance / (WALKING_SPEED_MPS * SECONDS_PER_MINUTE))
             
             result = NavigationResponse(
                 total_distance=total_distance,
