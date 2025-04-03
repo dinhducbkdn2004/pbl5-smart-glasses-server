@@ -20,7 +20,6 @@ async def index():
     logger.info("Root endpoint accessed")
     return {"message": f"Welcome to {settings.PROJECT_NAME}"}
 
-# Bao gồm các route từ file route.py
 app.include_router(router)
 
 @app.on_event("shutdown")

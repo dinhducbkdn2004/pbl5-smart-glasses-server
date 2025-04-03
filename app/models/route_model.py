@@ -17,7 +17,6 @@ class NavigationStep(BaseModel):
     instruction: str = Field(..., description="Detailed navigation instruction for visually impaired")
     distance: float = Field(..., description="Distance for this step in meters")
     direction: str = Field(..., description="Direction to turn (left/right/straight)")
-    landmarks: Optional[List[str]] = Field(default=None, description="Notable landmarks for this step")
 
 class NavigationResponse(BaseModel):
     total_distance: float = Field(..., description="Total distance in meters")

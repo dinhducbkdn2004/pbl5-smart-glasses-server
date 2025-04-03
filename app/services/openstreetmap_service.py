@@ -16,14 +16,12 @@ class OpenStreetMapService:
         self.user_agent = "SmartGlassesNavigationApp/1.0"
         self._cache = {}
         
-        # Cấu hình retry strategy
         retry_strategy = Retry(
-            total=3,  # Số lần retry tối đa
-            backoff_factor=1,  # Thời gian chờ giữa các lần retry
-            status_forcelist=[500, 502, 503, 504],  # Các status code cần retry
+            total=3, 
+            backoff_factor=1,  
+            status_forcelist=[500, 502, 503, 504], 
         )
         
-        # Tạo session với retry strategy
         self.session = requests.Session()
         adapter = HTTPAdapter(max_retries=retry_strategy)
         self.session.mount("http://", adapter)
@@ -31,7 +29,6 @@ class OpenStreetMapService:
 
     @lru_cache(maxsize=1000)
     def _calculate_bearing(self, point1: Tuple[float, float], point2: Tuple[float, float]) -> float:
-        """Calculate the bearing between two points with caching."""
         lat1, lon1 = math.radians(point1[0]), math.radians(point1[1])
         lat2, lon2 = math.radians(point2[0]), math.radians(point2[1])
         
@@ -43,18 +40,16 @@ class OpenStreetMapService:
 
     @lru_cache(maxsize=1000)
     def _get_direction(self, prev_bearing: float, next_bearing: float) -> str:
-        """Get human-readable direction based on bearing change with caching."""
         angle_diff = ((next_bearing - prev_bearing + 180) % 360) - 180
         
-        if abs(angle_diff) < 20:
-            return "Continue straight"
-        elif angle_diff > 0:
-            return "Turn right"
+        if angle_diff > 20:
+            return "Turn Right"
+        elif angle_diff < -20:
+            return "Turn Left"
         else:
-            return "Turn left"
+            return "Go Straight"
 
     def _make_request(self, url: str, params: Dict = None, headers: Dict = None, timeout: int = 30) -> Dict:
-        """Make HTTP request with retry mechanism."""
         try:
             response = self.session.get(
                 url,
@@ -73,7 +68,6 @@ class OpenStreetMapService:
 
     @lru_cache(maxsize=1000)
     def geocode_address(self, address: str) -> LocationPoint:
-        """Convert text address to coordinates using Nominatim with caching."""
         cache_key = f"geocode_{address}"
         if cache_key in self._cache:
             logger.debug(f"Cache hit for address: {address}")
@@ -165,12 +159,12 @@ class OpenStreetMapService:
                     
                     steps.append(NavigationStep(
                         instruction=instruction,
+                        
                         distance=step["distance"],
                         direction=direction,
-                        landmarks=[]
                     ))
             
-            estimated_time = int(total_distance / (1.4 * 60))  # Convert to minutes
+            estimated_time = int(total_distance / (1.4 * 60))
             
             result = NavigationResponse(
                 total_distance=total_distance,
